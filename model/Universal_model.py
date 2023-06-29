@@ -8,6 +8,7 @@ import torch.utils.checkpoint as checkpoint
 from torch.nn import LayerNorm
 
 from model.Unet import UNet2D
+from model.Dinov2 import DinoV2_Generator
 
 
 class Universal_model(nn.Module):
@@ -29,9 +30,21 @@ class Universal_model(nn.Module):
                 torch.nn.AdaptiveAvgPool2d((1, 1)),
                 nn.Conv2d(512, 256, kernel_size=1, stride=1, padding=0)
             )
-            self.to_one_channel = nn.Conv2d(out_channels, 1, kernel_size=1, stride=1, padding=0)
+        elif backbone == 'dinov2':
+            self.backbone = DinoV2_Generator(64)
+            self.precls_conv = nn.Sequential(
+                nn.GroupNorm(16, 64),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(64, 8, kernel_size=1)
+            )
+            self.GAP = nn.Sequential(
+                nn.GroupNorm(16, 384),
+                nn.ReLU(inplace=True),
+                torch.nn.AdaptiveAvgPool2d((1, 1)),
+                nn.Conv2d(384, 256, kernel_size=1, stride=1, padding=0)
+            )
         else:
-            raise Exception('{} backbone is not implemented in curretn version'.format(backbone))
+            raise Exception('{} backbone is not implemented in current version'.format(backbone))
 
         self.encoding = encoding
         self.out_channels = out_channels
@@ -137,7 +150,6 @@ class Universal_model(nn.Module):
             x_cond = x_cond.unsqueeze(-1).unsqueeze(-1)
             params = self.controller(x_cond)
             params.squeeze_(-1).squeeze_(-1)  # params.shape: torch.Size([32, 153]) 153 = sum(weight_nums + bias_nums)
-
             head_inputs = self.precls_conv(out[i].unsqueeze(0))  # --> 8 channel layer
             head_inputs = head_inputs.repeat(self.out_channels, 1, 1, 1)
             N, _, H, W = head_inputs.size()

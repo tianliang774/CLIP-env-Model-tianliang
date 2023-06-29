@@ -1,3 +1,4 @@
-a = {"a":1,
-     "b":2}
-print(a.a)
+import numpy as np
+a = np.ones((10,10))
+b = [0,1,2,3,4]
+print(b[-2:])

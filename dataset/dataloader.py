@@ -14,7 +14,7 @@ import numpy as np
 import torch
 from typing import IO, TYPE_CHECKING, Any, Callable, Dict, Hashable, List, Mapping, Optional, Sequence, Tuple, Union
 
-from torchvision.transforms import transforms
+from torchvision.transforms import transforms, CenterCrop
 
 
 def make_dataset(dir, max_dataset_size=float("inf")):
@@ -53,14 +53,13 @@ class ImageABDataset(Dataset):
         A_path = self.A_paths[index]
         B_path = self.B_paths[index]
         name = A_path.split(os.sep)[-4]
-        if name in ["ring", "low2high", "ct2mri"]:
+        if A_path[-4:] != ".npy" and name in ["ring", "low2high", "ct2mri"]:
             size = SIZE[name]
             A = np.fromfile(A_path, dtype='float32').reshape(size, size)
             B = np.fromfile(B_path, dtype='float32').reshape(size, size)
         else:
             A = np.load(A_path)
             B = np.load(B_path)
-
         ratio = B.max() - B.min()
         m = B.mean()
 
@@ -110,3 +109,41 @@ class InferDataset(Dataset):
 
     def __len__(self):
         return len(self.A_paths)
+
+
+if __name__ == "__main__":
+    class Args:
+        def __init__(self):
+            self.data_root_path = "testProject"
+            self.phase = "train"
+            self.device = "cuda"
+
+
+    args = Args()
+    dataset = ImageABDataset(args)
+
+    for i, batch in enumerate(dataset):
+        x, y, name = batch["A"].to(args.device), batch["B"].float().to(args.device), batch['name']
+        target_project_name = "dinotestProject"
+        size = x.shape[-1]
+        if size == 256:
+            res_size = 2
+        elif size == 512:
+            res_size = 4
+        else:
+            res_size = 0
+
+        Aoutput = x[0][res_size:-res_size, res_size:-res_size].cpu().numpy()
+        Boutput = y[0][res_size:-res_size, res_size:-res_size].cpu().numpy()
+        Atarget = rf"{target_project_name}/{name}/{args.phase}/A"
+        Btarget = rf"{target_project_name}/{name}/{args.phase}/B"
+
+        if not os.path.exists(Atarget):
+            os.makedirs(Atarget)
+        if not os.path.exists(Btarget):
+            os.makedirs(Btarget)
+        np.save(os.path.join(Atarget, f"{i}.npy"), Aoutput)
+        np.save(os.path.join(Btarget, f"{i}.npy"), Boutput)
+        if i % 100 == 0:
+            print(f"{i} of {len(dataset)} has been processed!")
+            print(Boutput.shape)
