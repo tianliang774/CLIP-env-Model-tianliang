@@ -36,7 +36,6 @@ def train(args, train_loader, model, optimizer, loss_L1_function):
     )
     for step, batch in enumerate(epoch_iterator):
         x, y, name = batch["A"].to(args.device), batch["B"].float().to(args.device), batch['name']
-        # x.shape: torch.Size([1, 1, 512, 512])
         logit_map = model(x)
         L1 = loss_L1_function(logit_map, y, name, TEMPLATE)*1000
         loss = L1
@@ -66,7 +65,7 @@ def process(args):
     args.device = torch.device(f"cuda:{rank}")
     torch.cuda.set_device(args.device)
 
-    # prepare the 3D model --> will change to 2D model to exec the picture generator task(tianliang)
+    # prepare the 2D Universal_model
     model = Universal_model(img_size=(args.roi_x, args.roi_y, args.roi_z),
                             in_channels=1,
                             out_channels=NUM_CLASS,
@@ -115,7 +114,6 @@ def process(args):
     torch.backends.cudnn.benchmark = True
 
     train_dataset = ImageABDataset(args)
-
     train_sampler = DistributedSampler(dataset=train_dataset, shuffle=True) if args.dist else None
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=int(args.batch_size),

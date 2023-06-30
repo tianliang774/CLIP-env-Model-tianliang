@@ -29,8 +29,8 @@ def validation(model, ValLoader, args):
         x, name = batch["A"].to(args.device), batch['name'][0]
         ratio, M = batch['R'].item(), batch['M'].item()
 
-        # Input what task do you want to execute
-        task_indexes = [0, 2]  # 0:scatter correction 2:low to high
+        # task_indexes represent what task do you want to execute
+        task_indexes = [0, 2]  # 0: scatter correction, 2: low to high
         chain_img = x
         save_image(chain_img, os.path.join("infer_res", f'{name}_{index}_chain0.png'))
         for i, task_index in enumerate(task_indexes):
@@ -93,10 +93,6 @@ def main():
 
     ## dataset
     parser.add_argument('--dataset_list', nargs='+', default=['PAOT_123457891213', 'PAOT_10_inner'])  # 'PAOT', 'felix'
-    ### please check this argment carefully
-    ### PAOT: include PAOT_123457891213 and PAOT_10
-    ### PAOT_123457891213: include 1 2 3 4 5 7 8 9 12 13
-    ### PAOT_10_inner
     parser.add_argument('--data_root_path', default='/home/jliu288/data/whole_organ/', help='data root path')
     parser.add_argument('--data_txt_path', default='./dataset/dataset_list/', help='data txt path')
     parser.add_argument('--batch_size', default=1, type=int, help='batch size')
@@ -123,7 +119,7 @@ def main():
 
     args = parser.parse_args()
 
-    # prepare the 3D model
+    # prepare the Universal model
     model = Universal_model(
         img_size=(args.roi_x, args.roi_y, args.roi_z),
         in_channels=1,
@@ -136,7 +132,7 @@ def main():
     store_dict = model.state_dict()
     checkpoint = torch.load(args.resume)
     load_dict = checkpoint['net']
-    # args.epoch = checkpoint['epoch']
+
 
     for key, value in load_dict.items():
         name = '.'.join(key.split('.')[1:])

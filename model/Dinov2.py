@@ -53,12 +53,14 @@ class conv_head(nn.Module):
 
 
 class DinoV2_Generator(nn.Module):
-    def __init__(self, num_classes, backbone='dinov2_s', head='conv', backbones=dino_backbones):
+    def __init__(self, num_classes, backbone='dinov2_s', head='conv', backbones=None):
         super(DinoV2_Generator, self).__init__()
+        if backbones is None:
+            backbones = dino_backbones
         self.heads = {
             'conv': conv_head
         }
-        self.backbones = dino_backbones
+        self.backbones = backbones
         # Convert 1-channel image to 3-channel image
         self.preprocess = nn.Sequential(nn.Conv2d(1, 3, kernel_size=1, stride=1, padding=0), nn.ReLU())
         self.backbone = load(r'model/facebookresearch_dinov2_master', self.backbones[backbone]['name'], source="local")
@@ -82,6 +84,7 @@ class DinoV2_Generator(nn.Module):
 
 
 if __name__ == "__main__":
+    # TEST CODE
     test = torch.randn((1, 1, 504, 504))
     model = DinoV2_Generator(5).cuda()
     feat, res = model(test)
