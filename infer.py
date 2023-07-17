@@ -30,14 +30,16 @@ def validation(model, ValLoader, args):
         ratio, M = batch['R'].item(), batch['M'].item()
 
         # task_indexes represent what task do you want to execute
-        task_indexes = [0, 2]  # 0: scatter correction, 2: low to high
+        task_indexes = [0]  # 0: scatter correction, 2: low to high
         chain_img = x
-        save_image(chain_img, os.path.join("infer_res", f'{name}_{index}_chain0.png'))
+        output = chain_img[0].cpu().numpy()
+        output.tofile(os.path.join(r"infer_res/A", f'{name}_{index}_chain0.raw'))
         for i, task_index in enumerate(task_indexes):
             fake_B = model(chain_img)
             fake_B = fake_B[:, task_index:task_index + 1, :, :].detach()
             chain_img = fake_B
-            save_image(chain_img, os.path.join("infer_res", f'{name}_{index}_chain{i+1}.png'))
+            output = np.float32(chain_img[0].cpu().numpy() * ratio + M)
+            output.tofile(os.path.join(r"infer_res/B", f'{name}_{index}_chain{i + 1}.raw'))
         torch.cuda.empty_cache()
 
     # ave_organ_dice = np.zeros((2, NUM_CLASS))
@@ -132,7 +134,6 @@ def main():
     store_dict = model.state_dict()
     checkpoint = torch.load(args.resume)
     load_dict = checkpoint['net']
-
 
     for key, value in load_dict.items():
         name = '.'.join(key.split('.')[1:])

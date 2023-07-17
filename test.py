@@ -38,10 +38,10 @@ def validation(model, ValLoader, args):
 
         fake_B = fake_B[:, task_index:task_index + 1, :, :].detach()
         real_B = y.detach()  # fake_B and real_B -->[1, 1, 512, 512]
-        for b in range(x.shape[0]):
-            save_image(x[b], os.path.join("tres", f'{name}_{index}_{b}_"A".png'))
-            save_image(fake_B[b], os.path.join("tres", f'{name}_{index}_{b}_"fake_B".png'))
-            save_image(real_B[b], os.path.join("tres", f'{name}_{index}_{b}_"real_B".png'))
+        # for b in range(x.shape[0]):
+        #     save_image(x[b], os.path.join("tres", f'{name}_{index}_{b}_"A".png'))
+        #     save_image(fake_B[b], os.path.join("tres", f'{name}_{index}_{b}_"fake_B".png'))
+        #     save_image(real_B[b], os.path.join("tres", f'{name}_{index}_{b}_"real_B".png'))
         fake_B = np.array(fake_B[0][0].cpu()) * ratio + M
         real_B = np.array(real_B[0][0].cpu()) * ratio + M
 
@@ -99,7 +99,7 @@ def main():
     ## logging
     parser.add_argument('--log_name', default='Nvidia/old_fold0', help='The path resume from checkpoint')
     ## model load
-    parser.add_argument('--backbone', default='unet', help='backbone [swinunetr or unet or dints or unetpp]')
+    parser.add_argument('--backbone', default='dinov2', help='backbone [swinunetr or unet or dints or unetpp]')
     parser.add_argument('--resume', default='./out/Nvidia/old_fold0/aepoch_500.pth',
                         help='The path resume from checkpoint')
     parser.add_argument('--pretrain', default='./pretrained_weights/swin_unetr.base_5000ep_f48_lr2e-4_pretrained.pt',

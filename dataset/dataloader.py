@@ -93,15 +93,14 @@ class InferDataset(Dataset):
     def __getitem__(self, index):
         A_path = self.A_paths[index]
         name = A_path.split(os.sep)[-3]
-        if name in ["ring", "low2high", "ct2mri"]:
-            size = SIZE[name]
-            A = np.fromfile(A_path, dtype='float32').reshape(size, size)
-        else:
-            A = np.load(A_path)
-
+        # if name in ["ring", "low2high", "ct2mri"]:
+        #     size = SIZE[name]
+        #     A = np.fromfile(A_path, dtype='float32').reshape(size, size)
+        # else:
+        #     A = np.load(A_path)
+        A = np.fromfile(A_path, dtype='float32').reshape(512, 512)
         ratio = A.max() - A.min()
         m = A.mean()
-
         A = (A - A.mean()) / (A.max() - A.min())
         A = transforms.ToTensor()(A)
 
@@ -115,7 +114,7 @@ if __name__ == "__main__":
     class Args:
         def __init__(self):
             self.data_root_path = "testProject"
-            self.phase = "train"
+            self.phase = "test"
             self.device = "cuda"
 
 

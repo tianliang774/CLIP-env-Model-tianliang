@@ -74,11 +74,11 @@ class DinoV2_Generator(nn.Module):
         batch_size = x.shape[0]
         mask_dim = (x.shape[2] / self.patch_size, x.shape[3] / self.patch_size)
         x = self.preprocess(x.cuda())
-        with torch.no_grad():
-            x = self.backbone.forward_features(x)
-            x = x['x_norm_patchtokens']
-            x = x.permute(0, 2, 1)
-            tx = x.reshape(batch_size, self.embedding_size, int(mask_dim[0]), int(mask_dim[1]))
+
+        x = self.backbone.forward_features(x)
+        x = x['x_norm_patchtokens']
+        x = x.permute(0, 2, 1)
+        tx = x.reshape(batch_size, self.embedding_size, int(mask_dim[0]), int(mask_dim[1]))
         x = self.head(tx)
         return tx, x
 

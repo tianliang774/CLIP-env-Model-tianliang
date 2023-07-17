@@ -175,7 +175,7 @@ def main():
                         help='The path of word embedding')
     ## hyperparameter
     parser.add_argument('--max_epoch', default=2000, type=int, help='Number of training epoches')
-    parser.add_argument('--store_num', default=50, type=int, help='Store model how often')
+    parser.add_argument('--store_num', default=5, type=int, help='Store model how often')
     parser.add_argument('--warmup_epoch', default=100, type=int, help='number of warmup epochs')
     parser.add_argument('--lr', default=1e-4, type=float, help='Learning rate')
     parser.add_argument('--weight_decay', default=1e-5, help='Weight Decay')
