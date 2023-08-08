@@ -19,7 +19,6 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel
 from tensorboardX import SummaryWriter
 
-
 from dataset.dataloader import ImageABDataset
 from utils import loss
 from utils.utils import TEMPLATE, NUM_CLASS
@@ -36,8 +35,8 @@ def train(args, train_loader, model, optimizer, loss_L1_function):
     )
     for step, batch in enumerate(epoch_iterator):
         x, y, name = batch["A"].to(args.device), batch["B"].float().to(args.device), batch['name']
-        logit_map = model(x)
-        L1 = loss_L1_function(logit_map, y, name, TEMPLATE)*1000
+        logit_map = model(x, args)
+        L1 = loss_L1_function(logit_map, y, name, TEMPLATE) * 1000
         loss = L1
         loss.backward()
         optimizer.step()
@@ -60,18 +59,17 @@ def process(args):
     if args.dist:
         dist.init_process_group(backend="nccl", init_method="env://")
         rank = args.local_rank
-        print(rank)
 
     args.device = torch.device(f"cuda:{rank}")
     torch.cuda.set_device(args.device)
 
     # prepare the 2D Universal_model
-    model = Universal_model(img_size=(args.roi_x, args.roi_y, args.roi_z),
-                            in_channels=1,
-                            out_channels=NUM_CLASS,
-                            backbone=args.backbone,
-                            encoding=args.trans_encoding
-                            )
+    model = Universal_model(
+        in_channels=1,
+        out_channels=NUM_CLASS,
+        backbone=args.backbone,
+        encoding=args.trans_encoding
+    )
 
     # Load pre-trained weights
     if args.pretrain is not None:
@@ -106,7 +104,7 @@ def process(args):
                 store_dict['.'.join(key.split('.')[1:])] = model_dict[key]
             model.load_state_dict(store_dict)
         optimizer.load_state_dict(checkpoint['optimizer'])
-        args.epoch = checkpoint['epoch']
+        args.epoch = checkpoint['epoch'] + 1
         scheduler.load_state_dict(checkpoint['scheduler'])
 
         print('success resume from ', args.resume)
@@ -153,7 +151,7 @@ def process(args):
     dist.destroy_process_group()
 
 
-def main():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     ## for distributed training
     parser.add_argument('--dist', dest='dist', type=bool, default=False,
@@ -165,7 +163,7 @@ def main():
     ## logging
     parser.add_argument('--log_name', default='unet', help='The path resume from checkpoint')
     ## model load
-    parser.add_argument('--backbone', default='dinov2', help='backbone [swinunetr or unet or dints or unetpp]')
+    parser.add_argument('--backbone', default='unet', help='backbone [swinunetr or unet or dints or unetpp]')
     parser.add_argument('--resume', default=None, help='The path resume from checkpoint')
     parser.add_argument('--pretrain', default=None,  # swin_unetr.base_5000ep_f48_lr2e-4_pretrained.pt
                         help='The path of pretrain model. Eg, ./pretrained_weights/swin_unetr.base_5000ep_f48_lr2e-4_pretrained.pt')
@@ -174,7 +172,7 @@ def main():
     parser.add_argument('--word_embedding', default='./pretrained_weights/txt_encoding.pth',
                         help='The path of word embedding')
     ## hyperparameter
-    parser.add_argument('--max_epoch', default=2000, type=int, help='Number of training epoches')
+    parser.add_argument('--max_epoch', default=10, type=int, help='Number of training epoches')
     parser.add_argument('--store_num', default=5, type=int, help='Store model how often')
     parser.add_argument('--warmup_epoch', default=100, type=int, help='number of warmup epochs')
     parser.add_argument('--lr', default=1e-4, type=float, help='Learning rate')
@@ -212,9 +210,5 @@ def main():
     args = parser.parse_args()
 
     process(args=args)
-
-
-if __name__ == "__main__":
-    main()
 
 # python -m torch.distributed.launch --nproc_per_node=2 --master_port=1234 train.py --dist True --uniform_sample

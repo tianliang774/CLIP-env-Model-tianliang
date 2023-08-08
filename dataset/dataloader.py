@@ -9,6 +9,7 @@ import time
 import warnings
 from copy import copy, deepcopy
 from torch.utils.data import Dataset
+import cv2 as cv
 
 import numpy as np
 import torch
@@ -62,9 +63,10 @@ class ImageABDataset(Dataset):
             B = np.load(B_path)
         ratio = B.max() - B.min()
         m = B.mean()
-
         A = (A - A.mean()) / (A.max() - A.min())
         B = (B - B.mean()) / (B.max() - B.min())
+        A = cv.resize(A, (512, 512))
+        B = cv.resize(B, (512, 512))
         A = transforms.ToTensor()(A)
         B = transforms.ToTensor()(B)
 
@@ -93,12 +95,12 @@ class InferDataset(Dataset):
     def __getitem__(self, index):
         A_path = self.A_paths[index]
         name = A_path.split(os.sep)[-3]
-        # if name in ["ring", "low2high", "ct2mri"]:
-        #     size = SIZE[name]
-        #     A = np.fromfile(A_path, dtype='float32').reshape(size, size)
-        # else:
-        #     A = np.load(A_path)
-        A = np.fromfile(A_path, dtype='float32').reshape(512, 512)
+        if A_path[-4:] != ".npy" and name in ["ring", "low2high", "ct2mri"]:
+            size = SIZE[name]
+            A = np.fromfile(A_path, dtype='float32').reshape(size, size)
+        else:
+            A = np.load(A_path)
+        A = cv.resize(A, (512, 512))
         ratio = A.max() - A.min()
         m = A.mean()
         A = (A - A.mean()) / (A.max() - A.min())
@@ -110,39 +112,4 @@ class InferDataset(Dataset):
         return len(self.A_paths)
 
 
-if __name__ == "__main__":
-    class Args:
-        def __init__(self):
-            self.data_root_path = "testProject"
-            self.phase = "test"
-            self.device = "cuda"
 
-
-    args = Args()
-    dataset = ImageABDataset(args)
-
-    for i, batch in enumerate(dataset):
-        x, y, name = batch["A"].to(args.device), batch["B"].float().to(args.device), batch['name']
-        target_project_name = "dinotestProject"
-        size = x.shape[-1]
-        if size == 256:
-            res_size = 2
-        elif size == 512:
-            res_size = 4
-        else:
-            res_size = 0
-
-        Aoutput = x[0][res_size:-res_size, res_size:-res_size].cpu().numpy()
-        Boutput = y[0][res_size:-res_size, res_size:-res_size].cpu().numpy()
-        Atarget = rf"{target_project_name}/{name}/{args.phase}/A"
-        Btarget = rf"{target_project_name}/{name}/{args.phase}/B"
-
-        if not os.path.exists(Atarget):
-            os.makedirs(Atarget)
-        if not os.path.exists(Btarget):
-            os.makedirs(Btarget)
-        np.save(os.path.join(Atarget, f"{i}.npy"), Aoutput)
-        np.save(os.path.join(Btarget, f"{i}.npy"), Boutput)
-        if i % 100 == 0:
-            print(f"{i} of {len(dataset)} has been processed!")
-            print(Boutput.shape)

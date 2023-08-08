@@ -30,12 +30,12 @@ def validation(model, ValLoader, args):
         ratio, M = batch['R'].item(), batch['M'].item()
 
         # task_indexes represent what task do you want to execute
-        task_indexes = [0]  # 0: scatter correction, 2: low to high
+        task_indexes = [TEMPLATE[name]]  # 0: scatter correction, 2: low to high
         chain_img = x
         output = chain_img[0].cpu().numpy()
         output.tofile(os.path.join(r"infer_res/A", f'{name}_{index}_chain0.raw'))
         for i, task_index in enumerate(task_indexes):
-            fake_B = model(chain_img)
+            fake_B = model(chain_img, args=args)
             fake_B = fake_B[:, task_index:task_index + 1, :, :].detach()
             chain_img = fake_B
             output = np.float32(chain_img[0].cpu().numpy() * ratio + M)
@@ -123,7 +123,6 @@ def main():
 
     # prepare the Universal model
     model = Universal_model(
-        img_size=(args.roi_x, args.roi_y, args.roi_z),
         in_channels=1,
         out_channels=NUM_CLASS,
         backbone=args.backbone,
@@ -148,11 +147,12 @@ def main():
 
     test_dataset = InferDataset(args)
 
-    test_loader = DataLoader(dataset=test_dataset,
-                             batch_size=int(args.batch_size),
-                             shuffle=True,
-                             num_workers=args.num_workers,
-                             )
+    test_loader = DataLoader(
+        dataset=test_dataset,
+        batch_size=int(args.batch_size),
+        shuffle=True,
+        num_workers=args.num_workers,
+    )
     args.device = "cuda" if torch.cuda.is_available() else "cpu"
     validation(model, test_loader, args)
 

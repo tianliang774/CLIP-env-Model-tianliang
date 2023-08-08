@@ -9,6 +9,7 @@ from tqdm import tqdm
 import os
 import argparse
 import time
+import cv2 as cv
 import collections
 from skimage.metrics import structural_similarity as ssim
 from skimage.metrics import peak_signal_noise_ratio as psnr
@@ -17,7 +18,6 @@ from skimage.metrics import mean_squared_error as mse
 from model.Universal_model import Universal_model
 from dataset.dataloader import ImageABDataset
 from utils.utils import TEMPLATE, NUM_CLASS
-
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -31,7 +31,7 @@ def validation(model, ValLoader, args):
         # print('%d processd' % (index))
         x, y, name = batch["A"].to(args.device), batch["B"].float().to(args.device), batch['name'][0]
 
-        fake_B = model(x)
+        fake_B = model(x, args=args)
 
         task_index = TEMPLATE[name]
         ratio, M = batch['R'].item(), batch['M'].item()
@@ -44,7 +44,9 @@ def validation(model, ValLoader, args):
         #     save_image(real_B[b], os.path.join("tres", f'{name}_{index}_{b}_"real_B".png'))
         fake_B = np.array(fake_B[0][0].cpu()) * ratio + M
         real_B = np.array(real_B[0][0].cpu()) * ratio + M
-
+        if name == 'ct2mri':
+            fake_B = cv.resize(fake_B, (256, 256))
+            real_B = cv.resize(real_B, (256, 256))
         test_res_dict[name]["rmse"] += np.sqrt(mse(fake_B, real_B))
         test_res_dict[name]["psnr"] += psnr(fake_B, real_B, data_range=ratio * 2)
         test_res_dict[name]["ssim"] += ssim(fake_B, real_B, use_sample_covariance=False, sigma=1.5,
@@ -144,7 +146,6 @@ def main():
 
     # prepare the 3D model
     model = Universal_model(
-        img_size=(args.roi_x, args.roi_y, args.roi_z),
         in_channels=1,
         out_channels=NUM_CLASS,
         backbone=args.backbone,

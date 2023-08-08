@@ -25,7 +25,7 @@ BackBone_type = {
 
 
 class Universal_model(nn.Module):
-    def __init__(self, img_size, in_channels, out_channels, backbone='unet', encoding='rand_embedding'):
+    def __init__(self, in_channels, out_channels, backbone='unet', encoding='rand_embedding'):
         # encoding: rand_embedding or word_embedding
         # out_channels: NUM_CLASS
         super().__init__()
@@ -120,10 +120,10 @@ class Universal_model(nn.Module):
                 x = F.relu(x)
         return x
 
-    def forward(self, x_in):
+    def forward(self, x_in, args):
         # dec4: the input of GAP layer --> [B,C,H,W]
         # out: the output of backbone --> [B,C,H,W]
-        dec4, out = self.backbone(x_in)
+        dec4, out = self.backbone(x_in, args)
         # task_encoding: the text embedding
         if self.encoding == 'rand_embedding':
             task_encoding = self.organ_embedding.weight
